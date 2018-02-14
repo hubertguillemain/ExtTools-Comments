@@ -11,18 +11,18 @@ const {
 } = semanticUIReact;
 
 // TODO items
-// - Manage copy/paste with line breaks
 // - Manage error cases
-// - TimeAgo hover gives the exact date and time in local
 // - Window sizing at initiation is incorrect
 // - Delete button on comments - only for comments send by the currentuser
 // - Reply button and threaded comments on comments
 // - Only show the last X comments (4 by default) and button to expand the rest
 // - Set extra fields "Last comment" and "Last comment by", so that OMIS plugins (email, script, ...) can act upon it.
+// TODO Do not reset state too early
 
 // TODO items which need some new SDK features
-// - Display user name and avatar from database
+// - Display user name and avatar from database - remove hardcoded user ID from default state
 // - Avatar / user name clickable to send flashnote
+
 
 // NOTE that the variables comments_field_ID are already read from config/config.js via the index.html
 
@@ -41,10 +41,14 @@ class CommentsSection extends React.Component {
     this.handleCancel = this.handleCancel.bind(this);
     this.getUserName = this.getUserName.bind(this);
     this.getUserAvatar = this.getUserAvatar.bind(this);
+	this.handleDelete = this.handleDelete.bind(this);
     this.state = {
       //Note that docID is a JSON object
-      docId: null,
+      docID: null,
+	  //TODO: remove hardcoded value
+	  userID: 10007,
       isLoading: true,
+	  toDelete: null,
       textAreaValue: "",
       comments: {
         total: 0,
@@ -54,15 +58,18 @@ class CommentsSection extends React.Component {
   }
 
   componentDidMount() {
-    //Initialize state
-    api.getCurrentDocumentId().then((docId) => {
+    
+	//TODO: get userID from api
+	//Initialize state
+    api.getCurrentDocumentId().then((docID) => {
       //place docID object in state so that we can reuse it later
       this.setState({
-        docId: docId
+        docID: docID
       });
 
       //Load the comments from DB to state
       api
+        .getFields(this.state.docID, [{ id: comments_field_ID }])
         .then((fields) => {
           if (JSON.stringify(fields[0].value) != "null") {
             this.setState({
@@ -80,44 +87,38 @@ class CommentsSection extends React.Component {
   handleAddComment(e) {
     //By safety we reload comments from client, in case another user has added a comment since the last reload
     api
-      .getFields(this.state.docId, [{ id: comments_field_ID }])
+      .getFields(this.state.docID, [{ id: comments_field_ID }])
       .then((fields) => {
-        if (JSON.stringify(fields[0].value) != "null") {
-          this.setState({
-            comments: JSON.parse(fields[0].value)
-          });
-        }
 
         var today = new Date();
-        var newCommentList = this.state.comments;
+        var newCommentList = JSON.parse(fields[0].value);
         var newComment = {
           user: "10007",
           timestamp: today.getTime(),
           text: this.state.textAreaValue
         };
 
-        //TODO: In this order, set fields "Last comment by, Last Comment at,, Comments
-
         //Update comments history and empty textArea
         newCommentList.commentshistory.push(newComment);
         newCommentList.total += 1;
-        this.setState({
-          comments: newCommentList,
-          textAreaValue: ""
-        });
+        
 
         var fieldsToSet = [
           OMApi.stringField(
-            JSON.stringify(this.state.comments),
+            JSON.stringify(newCommentList),
             comments_field_ID
           )
         ];
-        api.setFields(this.state.docId, fieldsToSet).then((setFieldAnswer) => {
+        api.setFields(this.state.docID, fieldsToSet).then((setFieldAnswer) => {
           //console.log(setFieldAnswer);
         });
         //TODO: manage error
 
-        //TODO: preventively update the required window height BEFORE the state is updated
+		this.setState({
+          comments: newCommentList,
+          textAreaValue: ""
+        });
+        //TODO: move the window resize to top of method, with management of the promise
         postContentSize(60);
 
         //put the focus back to the textAreaValue
@@ -136,8 +137,37 @@ class CommentsSection extends React.Component {
       textAreaValue: value
     });
   }
+   handleDelete(key) {
+   var newCommentList = null;
+   
+     //By safety we reload comments from client, in case another user has added a comment since the last reload
+    api
+      .getFields(this.state.docID, [{ id: comments_field_ID }])
+ .then((fields) => {
+	  newCommentList = JSON.parse(fields[0].value);
+      newCommentList.commentshistory.splice(key, 1);	  
+        newCommentList.total -= 1;
+        this.setState({
+          comments: newCommentList,
+        });
 
-  getUserName(userID) {
+        var fieldsToSet = [
+          OMApi.stringField(
+            JSON.stringify(this.state.comments),
+            comments_field_ID
+          )
+        ];
+        api.setFields(this.state.docID, fieldsToSet).then((setFieldAnswer) => {
+          //console.log(setFieldAnswer);
+        });
+        //TODO: manage error
+
+        //TODO: preventively update the required window height BEFORE the state is updated
+        postContentSize(60);
+      });
+  }
+
+  getUserName(userID) {		
     switch (userID) {
       case "10000":
         return "admin";
@@ -190,16 +220,17 @@ class CommentsSection extends React.Component {
               </Divider>
             */}
 
-        <Comment.Group>
+        <Comment.Group minimal>
           {this.state.comments.total == 0 ? (
             <div />
           ) : (
-            this.state.comments.commentshistory.map((item) => (
+            this.state.comments.commentshistory.map((item, key) => (
               <Comment>
                 <Comment.Avatar src={this.getUserAvatar(item.user)} />
                 <Comment.Content>
                   <Comment.Author as="a">
-                    {this.getUserName(item.user)}
+				  
+                    {(item.user == this.state.userID) ? "You" : this.getUserName(item.user)}
                   </Comment.Author>
                   <Comment.Metadata>
                     <span title={Date(item.timestamp)}>
@@ -208,7 +239,6 @@ class CommentsSection extends React.Component {
                   </Comment.Metadata>
                   <Comment.Text>
                     {/*This function manages the line breaks in the JSON. Compatible with IE11*/}
-
                     {item.text.split(/\n/).map(function(item, key) {
                       return (
                         <span key={key}>
@@ -218,11 +248,19 @@ class CommentsSection extends React.Component {
                       );
                     })}
                   </Comment.Text>
+				   <Comment.Actions>
+          <Comment.Action
+		  onClick={(e,value) => {
+		  
+		  this.handleDelete(key);
+		  }
+		  } 
+		  style={{display:(item.user == this.state.userID) ? "" : "none"}}
+		  >Delete</Comment.Action>
+        </Comment.Actions>
                   {/*
                          TODO: manage threaded comments
-                          <Comment.Actions>
-                            <Comment.Action>Reply</Comment.Action>
-                          </Comment.Actions>
+                         
                           */}
                 </Comment.Content>
               </Comment>
@@ -238,7 +276,7 @@ class CommentsSection extends React.Component {
             value={this.state.textAreaValue}
             id="textArea"
           />
-          <div style={{ float: "right" }}>
+         
             <Button
               onClick={this.handleAddComment}
               content="Add Comment"
@@ -248,10 +286,9 @@ class CommentsSection extends React.Component {
               primary
             />
             <Button onClick={this.handleCancel} content="Cancel" />
-          </div>
+         
         </Form>
-        <br />
-        <br />
+
       </Segment>
     );
   }
