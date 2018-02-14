@@ -18,11 +18,12 @@ const {
 // - Delete button on comments - only for comments send by the currentuser
 // - Reply button and threaded comments on comments
 // - Only show the last X comments (4 by default) and button to expand the rest
+// - Set extra fields "Last comment" and "Last comment by", so that OMIS plugins (email, script, ...) can act upon it.
+
 
 // TODO items which need some new SDK features
 // - Display user name and avatar from database
 // - Avatar / user name clickable to send flashnote
-// - Set extra fields "Last comment" and "Last comment by", so that OMIS plugins (email, script, ...) can act upon it.
 
 
 // NOTE that the variables comments_field_ID are already read from config/config.js via the index.html
@@ -212,7 +213,7 @@ switch (userID) {
                     {this.getUserName(item.user)}
                   </Comment.Author>
                   <Comment.Metadata>
-                    {timeago().format(item.timestamp)}
+                    <span title={Date(item.timestamp)}>{timeago().format(item.timestamp)}</span>
                   </Comment.Metadata>
                   <Comment.Text>{item.text}</Comment.Text>
                   {/*
