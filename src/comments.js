@@ -99,7 +99,7 @@ class CommentsSection extends React.Component {
         };
 
         //Update comments history and empty textArea
-        newCommentList.commentshistory.push(newComment);
+        newCommentList.commentshistory.unshift(newComment);
         newCommentList.total += 1;
         
 
@@ -138,6 +138,7 @@ class CommentsSection extends React.Component {
     });
   }
    handleDelete(key) {
+   //
    var newCommentList = null;
    
      //By safety we reload comments from client, in case another user has added a comment since the last reload
@@ -219,8 +220,28 @@ class CommentsSection extends React.Component {
                 <Button content=" 16 older " />
               </Divider>
             */}
-
-        <Comment.Group minimal>
+<Form reply>
+          <Form.TextArea
+            autoHeight
+			rows={1}
+            placeholder="Write your comment here"
+            onInput={this.handleOnInput}
+            value={this.state.textAreaValue}
+            id="textArea"
+          />
+         
+            <Button
+              onClick={this.handleAddComment}
+              content="Add Comment"
+              disabled={this.state.textAreaValue.length > 0 ? false : true}
+              labelPosition="left"
+              icon="edit"
+              primary
+            />
+            <Button onClick={this.handleCancel} content="Cancel" />
+         
+        </Form>
+        <Comment.Group>
           {this.state.comments.total == 0 ? (
             <div />
           ) : (
@@ -268,26 +289,7 @@ class CommentsSection extends React.Component {
           )}
         </Comment.Group>
 
-        <Form reply>
-          <Form.TextArea
-            autoHeight
-            placeholder="Write your comment here"
-            onInput={this.handleOnInput}
-            value={this.state.textAreaValue}
-            id="textArea"
-          />
-         
-            <Button
-              onClick={this.handleAddComment}
-              content="Add Comment"
-              disabled={this.state.textAreaValue.length > 0 ? false : true}
-              labelPosition="left"
-              icon="edit"
-              primary
-            />
-            <Button onClick={this.handleCancel} content="Cancel" />
-         
-        </Form>
+        
 
       </Segment>
     );
