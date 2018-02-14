@@ -20,11 +20,9 @@ const {
 // - Only show the last X comments (4 by default) and button to expand the rest
 // - Set extra fields "Last comment" and "Last comment by", so that OMIS plugins (email, script, ...) can act upon it.
 
-
 // TODO items which need some new SDK features
 // - Display user name and avatar from database
 // - Avatar / user name clickable to send flashnote
-
 
 // NOTE that the variables comments_field_ID are already read from config/config.js via the index.html
 
@@ -44,7 +42,7 @@ class CommentsSection extends React.Component {
     this.getUserName = this.getUserName.bind(this);
     this.getUserAvatar = this.getUserAvatar.bind(this);
     this.state = {
-	//Note that docID is a JSON object
+      //Note that docID is a JSON object
       docId: null,
       isLoading: true,
       textAreaValue: "",
@@ -58,37 +56,33 @@ class CommentsSection extends React.Component {
   componentDidMount() {
     //Initialize state
     api.getCurrentDocumentId().then((docId) => {
-		
       //place docID object in state so that we can reuse it later
       this.setState({
         docId: docId
       });
 
       //Load the comments from DB to state
-      api.getFields(this.state.docId, [{ id: comments_field_ID }]).then((fields) => {
+      api
+        .then((fields) => {
+          if (JSON.stringify(fields[0].value) != "null") {
+            this.setState({
+              comments: JSON.parse(fields[0].value)
+            });
+          }
 
-        if (JSON.stringify(fields[0].value)!= 'null') {
-          this.setState({
-            comments: JSON.parse(fields[0].value)
-          });
-        }
-		
-        //Update the window height
-		//TODO: preventively update the windo height before !
-        postContentSize(60);
-      });
+          //Update the window height
+          //TODO: preventively update the windo height before !
+          postContentSize(60);
+        });
     });
   }
 
   handleAddComment(e) {
-	  
-	  
-
     //By safety we reload comments from client, in case another user has added a comment since the last reload
     api
       .getFields(this.state.docId, [{ id: comments_field_ID }])
       .then((fields) => {
-        if (JSON.stringify(fields[0].value)!= 'null') {
+        if (JSON.stringify(fields[0].value) != "null") {
           this.setState({
             comments: JSON.parse(fields[0].value)
           });
@@ -119,13 +113,13 @@ class CommentsSection extends React.Component {
           )
         ];
         api.setFields(this.state.docId, fieldsToSet).then((setFieldAnswer) => {
-          console.log(setFieldAnswer);
+          //console.log(setFieldAnswer);
         });
         //TODO: manage error
-        
-	//TODO: preventively update the required window height BEFORE the state is updated 
+
+        //TODO: preventively update the required window height BEFORE the state is updated
         postContentSize(60);
-		
+
         //put the focus back to the textAreaValue
         document.getElementById("textArea").focus();
       });
@@ -144,39 +138,34 @@ class CommentsSection extends React.Component {
   }
 
   getUserName(userID) {
-switch (userID) {
-
-  case '10000':
-    return "admin";
-    break;
-	case '10004':
-    return "Jim Journalist";
-    break;
-	case '10005':
-    return "Dan Director";
-    break;
-	case '10007':
-    return "Pat Planner";
-    break;
-	case '10008':
-    return "Martha Mixer";
-    break;
-	case '10009':
-    return "car Camera";
-    break;
-	case '10010':
-    return "Ralf Radio";
-    break;
-	case '10011':
-    return "Olli Online";
-    break;
-  default:
-    return userID;
-
-}
-	  
-	  
-	
+    switch (userID) {
+      case "10000":
+        return "admin";
+        break;
+      case "10004":
+        return "Jim Journalist";
+        break;
+      case "10005":
+        return "Dan Director";
+        break;
+      case "10007":
+        return "Pat Planner";
+        break;
+      case "10008":
+        return "Martha Mixer";
+        break;
+      case "10009":
+        return "car Camera";
+        break;
+      case "10010":
+        return "Ralf Radio";
+        break;
+      case "10011":
+        return "Olli Online";
+        break;
+      default:
+        return userID;
+    }
   }
   getUserAvatar(userID) {
     if (userID == "10000") {
@@ -213,9 +202,22 @@ switch (userID) {
                     {this.getUserName(item.user)}
                   </Comment.Author>
                   <Comment.Metadata>
-                    <span title={Date(item.timestamp)}>{timeago().format(item.timestamp)}</span>
+                    <span title={Date(item.timestamp)}>
+                      {timeago().format(item.timestamp)}
+                    </span>
                   </Comment.Metadata>
-                  <Comment.Text>{item.text}</Comment.Text>
+                  <Comment.Text>
+                    {/*This function manages the line breaks in the JSON. Compatible with IE11*/}
+
+                    {item.text.split(/\n/).map(function(item, key) {
+                      return (
+                        <span key={key}>
+                          {item}
+                          <br />
+                        </span>
+                      );
+                    })}
+                  </Comment.Text>
                   {/*
                          TODO: manage threaded comments
                           <Comment.Actions>
@@ -258,10 +260,10 @@ switch (userID) {
 function postContentSize(offset) {
   // We add 30 pixels to avoid having a scrollbar flicker when the new comment appears
   const contentSize = {
-    width: document.getElementById('root').scrollWidth,
-    height: document.getElementById('root').scrollHeight + offset
+    width: document.getElementById("root").scrollWidth,
+    height: document.getElementById("root").scrollHeight + offset
   };
-  
+
   plugin.postNotify(
     WpLib.Notify.View.Module,
     WpLib.Notify.View.ContentSize,
