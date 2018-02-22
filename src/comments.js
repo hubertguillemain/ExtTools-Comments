@@ -23,7 +23,6 @@ const {
 // - Display user name and avatar from database - remove hardcoded user ID from default state
 // - Avatar / user name clickable to send flashnote
 
-
 // NOTE that the variables comments_field_ID are already read from config/config.js via the index.html
 
 //Initiate the OpenMedia plugin libraries
@@ -33,34 +32,38 @@ const builder = WpLib.Plugin.SamePageBuilder.create(); //.onNotify(onClientNotif
 const plugin = WpLib.Plugin.createPlugin(builder);
 const api = plugin.getApi();
 
+//Version of this module
+const module_version = 1;
+
 class CommentsSection extends React.Component {
   constructor(props) {
     super(props);
     this.handleOnInput = this.handleOnInput.bind(this);
     this.handleAddComment = this.handleAddComment.bind(this);
-    this.handleCancel = this.handleCancel.bind(this);
     this.getUserName = this.getUserName.bind(this);
     this.getUserAvatar = this.getUserAvatar.bind(this);
-	this.handleDelete = this.handleDelete.bind(this);
+    this.handleDelete = this.handleDelete.bind(this);
+	 this.handleShowAll = this.handleShowAll.bind(this);
+	
+	 
     this.state = {
       //Note that docID is a JSON object
       docID: null,
-	  //TODO: remove hardcoded value
-	  userID: 10007,
-      isLoading: true,
-	  toDelete: null,
+      //TODO: remove hardcoded value
+      userID: 10007,
+	  number_to_show: number_of_displayed_comments,
       textAreaValue: "",
       comments: {
         total: 0,
+        version: module_version,
         commentshistory: []
       }
     };
   }
 
   componentDidMount() {
-    
-	//TODO: get userID from api
-	//Initialize state
+    //TODO: get userID from api
+    //Initialize state
     api.getCurrentDocumentId().then((docID) => {
       //place docID object in state so that we can reuse it later
       this.setState({
@@ -72,26 +75,36 @@ class CommentsSection extends React.Component {
         .getFields(this.state.docID, [{ id: comments_field_ID }])
         .then((fields) => {
           if (JSON.stringify(fields[0].value) != "null") {
+            //TODO: manage versionning
+            //TODO: manage old non-JSON content
             this.setState({
               comments: JSON.parse(fields[0].value)
             });
           }
 
           //Update the window height
-          //TODO: preventively update the windo height before !
-          postContentSize(60);
+          postContentSize();
         });
     });
   }
+ 
+ componentDidUpdate(){
+ postContentSize();
+ }
 
   handleAddComment(e) {
-    //By safety we reload comments from client, in case another user has added a comment since the last reload
-    api
+  // start by reading again comments from database, in case another user made an update since the last read.
+     api
       .getFields(this.state.docID, [{ id: comments_field_ID }])
       .then((fields) => {
-
+	  console.log(fields);
+	     if (JSON.stringify(fields[0].value) != "null") {
+             var newCommentList = JSON.parse(fields[0].value);
+          }else{
+		  var newCommentList = this.state.comments;
+		  }
+		  console.log(newCommentList);
         var today = new Date();
-        var newCommentList = JSON.parse(fields[0].value);
         var newComment = {
           user: "10007",
           timestamp: today.getTime(),
@@ -100,36 +113,25 @@ class CommentsSection extends React.Component {
 
         //Update comments history and empty textArea
         newCommentList.commentshistory.unshift(newComment);
+		console.log(newCommentList);
         newCommentList.total += 1;
-        
+		newCommentList.version = module_version;
 
         var fieldsToSet = [
-          OMApi.stringField(
-            JSON.stringify(newCommentList),
-            comments_field_ID
-          )
+          OMApi.stringField(JSON.stringify(newCommentList), comments_field_ID)
         ];
         api.setFields(this.state.docID, fieldsToSet).then((setFieldAnswer) => {
           //console.log(setFieldAnswer);
         });
         //TODO: manage error
 
-		this.setState({
+        this.setState({
           comments: newCommentList,
           textAreaValue: ""
         });
-        //TODO: move the window resize to top of method, with management of the promise
-        postContentSize(60);
-
         //put the focus back to the textAreaValue
         document.getElementById("textArea").focus();
       });
-  }
-
-  handleCancel(e) {
-    this.setState({
-      textAreaValue: ""
-    });
   }
 
   handleOnInput(e, { value }) {
@@ -137,19 +139,29 @@ class CommentsSection extends React.Component {
       textAreaValue: value
     });
   }
-   handleDelete(key) {
-   //
-   var newCommentList = null;
-   
-     //By safety we reload comments from client, in case another user has added a comment since the last reload
+  handleShowAll(e, { value }) {
+ 
+    this.setState({
+      number_to_show: this.state.total,
+    }
+	);
+  }
+  
+  
+  
+  handleDelete(key) {
+    //
+    var newCommentList = null;
+
+    //By safety we reload comments from client, in case another user has added a comment since the last reload
     api
       .getFields(this.state.docID, [{ id: comments_field_ID }])
- .then((fields) => {
-	  newCommentList = JSON.parse(fields[0].value);
-      newCommentList.commentshistory.splice(key, 1);	  
+      .then((fields) => {
+        newCommentList = JSON.parse(fields[0].value);
+        newCommentList.commentshistory.splice(key, 1);
         newCommentList.total -= 1;
         this.setState({
-          comments: newCommentList,
+          comments: newCommentList
         });
 
         var fieldsToSet = [
@@ -163,12 +175,10 @@ class CommentsSection extends React.Component {
         });
         //TODO: manage error
 
-        //TODO: preventively update the required window height BEFORE the state is updated
-        postContentSize(60);
       });
   }
 
-  getUserName(userID) {		
+  getUserName(userID) {
     switch (userID) {
       case "10000":
         return "admin";
@@ -211,47 +221,53 @@ class CommentsSection extends React.Component {
   }
 
   render() {
+  
     return (
       <Segment basic>
-        {/*
-            //TODO: Only show the last X comments
-      
-            <Divider horizontal>
-                <Button content=" 16 older " />
-              </Divider>
-            */}
-<Form reply>
-          <Form.TextArea
-            autoHeight
-			rows={1}
-            placeholder="Write your comment here"
-            onInput={this.handleOnInput}
-            value={this.state.textAreaValue}
-            id="textArea"
-          />
-         
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-end"
+          }}
+        >
+          <div style={{ flex: "1" }}>
+            <Form reply>
+              <Form.TextArea
+                autoHeight
+                rows={1}
+                placeholder="Write your comment here"
+                onInput={this.handleOnInput}
+                value={this.state.textAreaValue}
+                id="textArea"
+              />
+            </Form>
+          </div>
+
+          <div style={{ flex: "0", marginLeft: "10px" }}>
             <Button
               onClick={this.handleAddComment}
-              content="Add Comment"
               disabled={this.state.textAreaValue.length > 0 ? false : true}
-              labelPosition="left"
-              icon="edit"
+              content="Add"
               primary
             />
-            <Button onClick={this.handleCancel} content="Cancel" />
-         
-        </Form>
+		
+          </div>
+        </div>
         <Comment.Group>
           {this.state.comments.total == 0 ? (
             <div />
           ) : (
-            this.state.comments.commentshistory.map((item, key) => (
+		  
+		  
+            this.state.comments.commentshistory.slice(0, this.state.number_to_show).map((item, key) => (
               <Comment>
                 <Comment.Avatar src={this.getUserAvatar(item.user)} />
                 <Comment.Content>
                   <Comment.Author as="a">
-				  
-                    {(item.user == this.state.userID) ? "You" : this.getUserName(item.user)}
+                    {item.user == this.state.userID
+                      ? "You"
+                      : this.getUserName(item.user)}
                   </Comment.Author>
                   <Comment.Metadata>
                     <span title={Date(item.timestamp)}>
@@ -269,43 +285,49 @@ class CommentsSection extends React.Component {
                       );
                     })}
                   </Comment.Text>
-				   <Comment.Actions>
-          <Comment.Action
-		  onClick={(e,value) => {
-		  
-		  this.handleDelete(key);
-		  }
-		  } 
-		  style={{display:(item.user == this.state.userID) ? "" : "none"}}
-		  >Delete</Comment.Action>
-        </Comment.Actions>
-                  {/*
-                         TODO: manage threaded comments
-                         
-                          */}
+                  <Comment.Actions>
+                    <Comment.Action
+                      onClick={(e, value) => {
+                        this.handleDelete(key);
+                      }}
+                      style={{
+                        display: item.user == this.state.userID ? "" : "none"
+                      }}
+                    >
+                      Delete
+                    </Comment.Action>
+                  </Comment.Actions>
                 </Comment.Content>
               </Comment>
             ))
           )}
         </Comment.Group>
+		
+		 {this.state.comments.total > this.state.number_to_show ? (
+           <Divider horizontal clearing>
+		<Button onClick={this.handleShowAll}>
+		Show {this.state.comments.total - this.state.number_to_show} older
+		</Button>
+		</Divider>
 
-        
+          ) : (
+		  
+		  <div/>
+		  )
+		  }
 
+		
       </Segment>
     );
   }
 }
 
-function postContentSize(offset) {
-  // We add 30 pixels to avoid having a scrollbar flicker when the new comment appears
-  const contentSize = {
-    width: document.getElementById("root").scrollWidth,
-    height: document.getElementById("root").scrollHeight + offset
-  };
-
-  plugin.postNotify(
-    WpLib.Notify.View.Module,
-    WpLib.Notify.View.ContentSize,
-    contentSize
-  );
+function postContentSize() {
+     const contentSize: WpLib.Notify.View.ContentSizeData = {
+          width: document.getElementById("root").scrollWidth,
+          height: document.getElementById("root").scrollHeight
+		 
+     }
+     plugin.postNotify(WpLib.Notify.View.Module, WpLib.Notify.View.ContentSize, contentSize)
 }
+

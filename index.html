@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-<style>
+<style type="text/css">
 html {
     height:100%;
 }
@@ -10,16 +10,22 @@ html {
 body {
     height:100%;
 }
+
+body {
+    overflow:hidden;
+}
 </style>
+
+
     <meta charset="UTF-8">
     <!-- Can be used on Mobile device -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0">
     <title>Comments</title>
 
-	<!-- Polyfill for Internet Exporer 11's missing support of Promise -->
-	<script src="https://cdn.jsdelivr.net/npm/es6-promise@4/dist/es6-promise.min.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/es6-promise@4/dist/es6-promise.auto.min.js"></script> 
+<!-- Automatically provides/replaces `Promise` if missing or broken. -->
 
+<script src="https://cdn.jsdelivr.net/npm/es6-promise@4/dist/es6-promise.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/es6-promise@4/dist/es6-promise.auto.min.js"></script> 
     <!-- React and a Babel to transpile JSX on client side-->
     <script src="lib/react/react.production.min.js"></script>
     <script src="lib/react/react-dom.production.min.js"></script>
