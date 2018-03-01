@@ -3,7 +3,7 @@ This plugin add commenting functionality as a section for Documents in NewsBoard
 The thread is voluntarily made simple (no comment thread) in order to make it easier to read chronologically how the story develops.
 Note that Notifification mechanism (email or other) is not managed by this plugin.
 
-#Educational purpose
+# Educational purpose
 
 The goal here is to provide a simple yet functional sample project that can easily be forked also by casual developers:
 - No build process needed, just copy/paste (see How-to section below)
@@ -12,7 +12,7 @@ The goal here is to provide a simple yet functional sample project that can easi
 - A single, easy to read file (main.js) with all the functional implementation to play with. Just leave the rest as it is and it should "just work"
 - Configuration via a simple config.js file
 
-#How-to
+# How-to
 
 1. Download the whole package:
   - As zip from gihub web app
