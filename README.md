@@ -3,12 +3,14 @@ This plugin add commenting functionality as a section for Documents in NewsBoard
 The thread is voluntarily made simple (no comment thread) in order to make it easier to read chronologically how the story develops.
 Note that Notifification mechanism (email or other) is not managed by this plugin.
 
+Bug reports, change requests and pull requests are welcome in this Issue section.
+
 # Educational purpose
 
 The goal here is to provide a simple yet functional sample project that can easily be forked also by casual developers:
 - No build process needed, just copy/paste (see How-to section below)
 - Maintain look and feel using semantic UI
-- Supports all modern Browsers, including necessary  polyfills for IE11+
+- Supports all modern Browsers, including necessary [Promise](https://www.promisejs.org/) polyfills for IE11+
 - A single, easy to read file (main.js) with all the functional implementation to play with. Just leave the rest as it is and it should "just work"
 - Configuration via a simple config.js file
 
@@ -24,7 +26,10 @@ The goal here is to provide a simple yet functional sample project that can easi
   - Make sure the apppool has sufficient privileges on the folder.
 
 3. Configure the config/config.js file for field mappings
-- Make sure to choose fields which do not have random data in it. The plugin expects to find either it's own json data structure, or null
+- Make sure to choose fields which do not have random data in it. 
+- The plugin expects to find either it's own json data structure, or null
+- You should probably choose a non-indexed field for the JSON data
+- You should probably also add the configured fields to the list of Copy2Exception
 
 4. In the Admin Tool, configure this external tool 
   - Access mode: NewsBoard / Template / Section
